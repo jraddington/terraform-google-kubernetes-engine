@@ -15,7 +15,7 @@
  */
 
 output "project_ids" {
-  value = [module.gke-project-1.project_id, module.gke-project-2.project_id]
+  value = [module.gke-project-1.project_id, module.gke-project-2.project_id, module.gke-project-asm.project_id]
 }
 
 output "sa_key" {
@@ -23,8 +23,12 @@ output "sa_key" {
   sensitive = true
 }
 
+output "int_sa" {
+  value = google_service_account.int_test.email
+}
+
 output "compute_engine_service_accounts" {
-  value = [google_service_account.gke_sa_1.email, google_service_account.gke_sa_2.email]
+  value = [google_service_account.gke_sa_1.email, google_service_account.gke_sa_2.email, google_service_account.gke_sa_asm.email]
 }
 
 output "registry_project_id" {

@@ -19,6 +19,18 @@ variable "name" {
   type        = string
 }
 
+variable "cluster_name" {
+  description = "Cluster name. Required if using existing KSA."
+  type        = string
+  default     = ""
+}
+
+variable "location" {
+  description = "Cluster location (region if regional cluster, zone if zonal cluster). Required if using existing KSA."
+  type        = string
+  default     = ""
+}
+
 variable "k8s_sa_name" {
   description = "Name for the existing Kubernetes service account"
   type        = string
@@ -38,6 +50,12 @@ variable "project_id" {
 
 variable "use_existing_k8s_sa" {
   description = "Use an existing kubernetes service account instead of creating one"
+  default     = false
+  type        = bool
+}
+
+variable "automount_service_account_token" {
+  description = "Enable automatic mounting of the service account token"
   default     = false
   type        = bool
 }

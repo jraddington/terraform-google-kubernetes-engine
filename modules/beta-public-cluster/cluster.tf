@@ -51,6 +51,9 @@ resource "google_container_cluster" "primary" {
 
   subnetwork = "projects/${local.network_project_id}/regions/${var.region}/subnetworks/${var.subnetwork}"
 
+  default_snat_status {
+    disabled = var.disable_default_snat
+  }
   min_master_version = var.release_channel != null ? null : local.master_version
 
   logging_service    = var.logging_service
@@ -81,9 +84,9 @@ resource "google_container_cluster" "primary" {
   }
 
   dynamic "pod_security_policy_config" {
-    for_each = var.pod_security_policy_config
+    for_each = var.enable_pod_security_policy ? [var.enable_pod_security_policy] : []
     content {
-      enabled = pod_security_policy_config.value.enabled
+      enabled = pod_security_policy_config.value
     }
   }
   dynamic "master_authorized_networks_config" {
@@ -145,8 +148,17 @@ resource "google_container_cluster" "primary" {
         enabled = gce_persistent_disk_csi_driver_config.value.enabled
       }
     }
+
+    kalm_config {
+      enabled = var.kalm_config
+    }
+
+    config_connector_config {
+      enabled = var.config_connector
+    }
   }
 
+  networking_mode = "VPC_NATIVE"
   ip_allocation_policy {
     cluster_secondary_range_name  = var.ip_range_pods
     services_secondary_range_name = var.ip_range_services
@@ -291,7 +303,7 @@ resource "google_container_node_pool" "pools" {
 
   node_config {
     image_type   = lookup(each.value, "image_type", "COS")
-    machine_type = lookup(each.value, "machine_type", "n1-standard-2")
+    machine_type = lookup(each.value, "machine_type", "e2-medium")
     labels = merge(
       lookup(lookup(local.node_pools_labels, "default_values", {}), "cluster_name", true) ? { "cluster_name" = var.name } : {},
       lookup(lookup(local.node_pools_labels, "default_values", {}), "node_pool", true) ? { "node_pool" = each.value["name"] } : {},
@@ -387,25 +399,21 @@ resource "google_container_node_pool" "pools" {
   }
 }
 
-resource "null_resource" "wait_for_cluster" {
-  count = var.skip_provisioners ? 0 : 1
+module "gcloud_wait_for_cluster" {
+  source  = "terraform-google-modules/gcloud/google"
+  version = "~> 1.3.0"
+  enabled = var.skip_provisioners
 
-  triggers = {
-    project_id = var.project_id
-    name       = var.name
-  }
+  upgrade       = var.gcloud_upgrade
+  skip_download = var.gcloud_skip_download
 
-  provisioner "local-exec" {
-    command = "${path.module}/scripts/wait-for-cluster.sh ${self.triggers.project_id} ${self.triggers.name}"
-  }
+  create_cmd_entrypoint  = "${path.module}/scripts/wait-for-cluster.sh"
+  create_cmd_body        = "${var.project_id} ${var.name}"
+  destroy_cmd_entrypoint = "${path.module}/scripts/wait-for-cluster.sh"
+  destroy_cmd_body       = "${var.project_id} ${var.name}"
 
-  provisioner "local-exec" {
-    when    = destroy
-    command = "${path.module}/scripts/wait-for-cluster.sh ${self.triggers.project_id} ${self.triggers.name}"
-  }
-
-  depends_on = [
-    google_container_cluster.primary,
-    google_container_node_pool.pools,
-  ]
+  module_depends_on = concat(
+    [google_container_cluster.primary.master_version],
+    [for pool in google_container_node_pool.pools : pool.name]
+  )
 }

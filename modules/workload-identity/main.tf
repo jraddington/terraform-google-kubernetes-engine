@@ -33,6 +33,7 @@ resource "google_service_account" "cluster_service_account" {
 resource "kubernetes_service_account" "main" {
   count = var.use_existing_k8s_sa ? 0 : 1
 
+  automount_service_account_token = var.automount_service_account_token
   metadata {
     name      = var.name
     namespace = var.namespace
@@ -43,19 +44,17 @@ resource "kubernetes_service_account" "main" {
 }
 
 module "annotate-sa" {
-  source  = "terraform-google-modules/gcloud/google"
-  version = "~> 0.5"
+  source  = "terraform-google-modules/gcloud/google//modules/kubectl-wrapper"
+  version = "~> 1.4"
 
-  platform              = "linux"
-  additional_components = ["kubectl"]
-  enabled               = var.use_existing_k8s_sa
-  skip_download         = true
+  enabled          = var.use_existing_k8s_sa
+  skip_download    = true
+  cluster_name     = var.cluster_name
+  cluster_location = var.location
+  project_id       = var.project_id
 
-  create_cmd_entrypoint = "kubectl"
-  create_cmd_body       = "annotate sa -n ${local.output_k8s_namespace} ${local.k8s_given_name} iam.gke.io/gcp-service-account=${local.gcp_sa_email}"
-
-  destroy_cmd_entrypoint = "kubectl"
-  destroy_cmd_body       = "annotate sa -n ${local.output_k8s_namespace} ${local.k8s_given_name} iam.gke.io/gcp-service-account-"
+  kubectl_create_command  = "kubectl annotate --overwrite sa -n ${local.output_k8s_namespace} ${local.k8s_given_name} iam.gke.io/gcp-service-account=${local.gcp_sa_email}"
+  kubectl_destroy_command = "kubectl annotate sa -n ${local.output_k8s_namespace} ${local.k8s_given_name} iam.gke.io/gcp-service-account-"
 }
 
 resource "google_service_account_iam_member" "main" {

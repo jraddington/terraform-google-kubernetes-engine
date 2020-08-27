@@ -44,14 +44,14 @@ control "gcloud" do
       end
 
       it "has the expected addon settings" do
-        expect(data['addonsConfig']).to eq({
+        expect(data['addonsConfig']).to include(
           "horizontalPodAutoscaling" => {},
           "httpLoadBalancing" => {},
           "kubernetesDashboard" => {
             "disabled" => true,
           },
           "networkPolicyConfig" => {},
-        })
+        )
       end
     end
 
@@ -75,9 +75,22 @@ control "gcloud" do
               "labels" => including(
                 "cluster_name" => cluster_name,
                 "node_pool" => "default-node-pool",
-		"sandbox.gke.io/runtime" => "gvisor",
               ),
             ),
+          )
+        )
+      end
+
+      it "has the expected taints" do
+        expect(node_pools).to include(
+          including(
+            "config" => including(
+              "taints" => match_array([{
+              "effect"=>"NO_SCHEDULE",
+              "key"=>"sandbox.gke.io/runtime",
+              "value"=>"gvisor"
+              }])
+            )
           )
         )
       end

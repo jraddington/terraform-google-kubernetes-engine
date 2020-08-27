@@ -12,20 +12,8 @@ The resources/services/activations/deletions that this module will create/trigge
 Sub modules are provided from creating private clusters, beta private clusters, and beta public clusters as well.  Beta sub modules allow for the use of various GKE beta features. See the modules directory for the various sub modules.
 
 {% if private_cluster %}
-## Private Cluster Endpoints
-When creating a [private cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters), nodes are provisioned with private IPs.
-The Kubernetes master endpoint is also [locked down](https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters#access_to_the_cluster_endpoints), which affects these module features:
-- `configure_ip_masq`
-- `stub_domains`
-
-If you are *not* using these features, then the module will function normally for private clusters and no special configuration is needed.
-If you are using these features with a private cluster, you will need to either:
-1. Run Terraform from a VM on the same VPC as your cluster (allowing it to connect to the private endpoint) and set `deploy_using_private_endpoint` to `true`.
-2. Enable (beta) [route export functionality](https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters#master-on-prem-routing) to connect from an on-premise network over a VPN or Interconnect.
-3. Include the external IP of your Terraform deployer in the `master_authorized_networks` configuration. Note that only IP addresses reserved in Google Cloud (such as in other VPCs) can be whitelisted.
-4. Deploy a [bastion host](https://github.com/terraform-google-modules/terraform-google-bastion-host) or [proxy](https://cloud.google.com/solutions/creating-kubernetes-engine-private-clusters-with-net-proxies) in the same VPC as your GKE cluster.
-
-If you are going to isolate your GKE private clusters from internet access you could check [guide](https://medium.com/google-cloud/completely-private-gke-clusters-with-no-internet-connectivity-945fffae1ccd) and [repo](https://github.com/andreyk-code/no-inet-gke-cluster)
+## Private Cluster Details
+For details on configuring private clusters with this module, check the [troubleshooting guide](../../docs/private_clusters.md).
 
 {% endif %}
 {% if update_variant %}
@@ -90,7 +78,7 @@ module "gke" {
   node_pools = [
     {
       name               = "default-node-pool"
-      machine_type       = "n1-standard-2"
+      machine_type       = "e2-medium"
       {% if beta_cluster %}
       node_locations     = "us-central1-b,us-central1-c"
       {% endif %}
@@ -179,7 +167,7 @@ The node_pools variable takes the following parameters:
 | auto_repair | Whether the nodes will be automatically repaired | true | Optional |
 | autoscaling | Configuration required by cluster autoscaler to adjust the size of the node pool to the current cluster usage | true | Optional |
 | auto_upgrade | Whether the nodes will be automatically upgraded | true (if cluster is regional) | Optional |
-| disk_size_gb | Size of the disk attached to each node, specified in GB. The smallest allowed disk size is 10GB | 100GB | Optional |
+| disk_size_gb | Size of the disk attached to each node, specified in GB. The smallest allowed disk size is 10GB | 100 | Optional |
 | disk_type | Type of the disk attached to each node (e.g. 'pd-standard' or 'pd-ssd') | pd-standard | Optional |
 {% if beta_cluster %}
 | effect | Effect for the taint | | Required |
@@ -190,7 +178,7 @@ The node_pools variable takes the following parameters:
 | key | The key required for the taint | | Required |
 {% endif %}
 | local_ssd_count | The amount of local SSD disks that will be attached to each cluster node | 0 | Optional |
-| machine_type | The name of a Google Compute Engine machine type | n1-standard-2 | Optional |
+| machine_type | The name of a Google Compute Engine machine type | e2-medium | Optional |
 | max_count | Maximum number of nodes in the NodePool. Must be >= min_count | 100 | Optional |
 {% if beta_cluster %}
 | max_pods_per_node | The maximum number of pods per node in this cluster | null | Optional |
@@ -257,20 +245,6 @@ In order to operate with the Service Account you must activate the following API
 
 - Compute Engine API - compute.googleapis.com
 - Kubernetes Engine API - container.googleapis.com
-
-## File structure
-The project has the following folders and files:
-
-- /: root folder
-- /examples: Examples for using this module and sub module.
-- /helpers: Helper scripts.
-- /scripts: Scripts for specific tasks on module (see Infrastructure section on this file).
-- /test: Folders with files for testing the module (see Testing section on this file).
-- /main.tf: `main` file for the public module, contains all the resources to create.
-- /variables.tf: Variables for the public cluster module.
-- /output.tf: The outputs for the public cluster module.
-- /README.MD: This file.
-- /modules: Private and beta sub modules.
 
 {% if beta_cluster %}
 [terraform-provider-google-beta]: https://github.com/terraform-providers/terraform-provider-google-beta

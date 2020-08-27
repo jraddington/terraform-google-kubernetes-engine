@@ -48,15 +48,15 @@ control "gcloud" do
       end
 
       it "has the expected addon settings" do
-        expect(data['addonsConfig']).to eq({
-          "cloudRunConfig" => {},
-          "horizontalPodAutoscaling" => {},
-          "httpLoadBalancing" => {},
-          "kubernetesDashboard" => {
-            "disabled" => true,
-          },
-          "networkPolicyConfig" => {},
-        })
+        expect(data['addonsConfig']).to include(
+            "cloudRunConfig" => {},
+            "horizontalPodAutoscaling" => {},
+            "httpLoadBalancing" => {},
+            "kubernetesDashboard" => including(
+              "disabled" => true,
+            ),
+            "networkPolicyConfig" => {},
+          )
       end
     end
 
@@ -124,7 +124,7 @@ control "gcloud" do
         expect(node_pools).to include(
           including(
             "config" => including(
-              "machineType" => "n1-standard-2",
+              "machineType" => "e2-medium",
             ),
           )
         )

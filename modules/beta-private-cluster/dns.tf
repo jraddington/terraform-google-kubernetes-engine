@@ -19,18 +19,25 @@
 /******************************************
   Delete default kube-dns configmap
  *****************************************/
-resource "null_resource" "delete_default_kube_dns_configmap" {
-  count = (local.custom_kube_dns_config || local.upstream_nameservers_config) && ! var.skip_provisioners ? 1 : 0
+module "gcloud_delete_default_kube_dns_configmap" {
+  source           = "terraform-google-modules/gcloud/google//modules/kubectl-wrapper"
+  version          = "~> 1.4"
+  enabled          = (local.custom_kube_dns_config || local.upstream_nameservers_config) && ! var.skip_provisioners
+  cluster_name     = google_container_cluster.primary.name
+  cluster_location = google_container_cluster.primary.location
+  project_id       = var.project_id
+  upgrade          = var.gcloud_upgrade
+  skip_download    = var.gcloud_skip_download
 
-  provisioner "local-exec" {
-    command = "${path.module}/scripts/kubectl_wrapper.sh https://${local.cluster_endpoint} ${data.google_client_config.default.access_token} ${local.cluster_ca_certificate} ${path.module}/scripts/delete-default-resource.sh kube-system configmap kube-dns"
-  }
 
-  depends_on = [
-    data.google_client_config.default,
-    google_container_cluster.primary,
-    google_container_node_pool.pools,
-  ]
+  kubectl_create_command  = "${path.module}/scripts/delete-default-resource.sh kube-system configmap kube-dns"
+  kubectl_destroy_command = ""
+
+  module_depends_on = concat(
+    [data.google_client_config.default.access_token],
+    [google_container_cluster.primary.master_version],
+    [for pool in google_container_node_pool.pools : pool.name]
+  )
 }
 
 /******************************************
@@ -55,7 +62,7 @@ EOF
   }
 
   depends_on = [
-    null_resource.delete_default_kube_dns_configmap,
+    module.gcloud_delete_default_kube_dns_configmap.wait,
     data.google_client_config.default,
     google_container_cluster.primary,
     google_container_node_pool.pools,
@@ -82,7 +89,7 @@ EOF
   }
 
   depends_on = [
-    null_resource.delete_default_kube_dns_configmap,
+    module.gcloud_delete_default_kube_dns_configmap.wait,
     data.google_client_config.default,
     google_container_cluster.primary,
     google_container_node_pool.pools,
@@ -112,7 +119,7 @@ EOF
   }
 
   depends_on = [
-    null_resource.delete_default_kube_dns_configmap,
+    module.gcloud_delete_default_kube_dns_configmap.wait,
     data.google_client_config.default,
     google_container_cluster.primary,
     google_container_node_pool.pools,

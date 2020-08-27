@@ -328,17 +328,44 @@ variable "skip_provisioners" {
   default     = false
 }
 
-variable "pod_security_policy_config" {
-  type        = list(object({ enabled = bool }))
+variable "enable_pod_security_policy" {
+  type        = bool
   description = "enabled - Enable the PodSecurityPolicy controller for this cluster. If enabled, pods must be valid under a PodSecurityPolicy to be created."
-
-  default = [{
-    "enabled" = true
-  }]
+  default     = false
 }
 
 variable "gce_pd_csi_driver" {
   type        = bool
   description = "(Beta) Whether this cluster should enable the Google Compute Engine Persistent Disk Container Storage Interface (CSI) Driver."
   default     = true
+}
+
+variable "add_cluster_firewall_rules" {
+  type        = bool
+  description = "Create additional firewall rules"
+  default     = false
+}
+
+variable "firewall_priority" {
+  type        = number
+  description = "Priority rule for firewall rules"
+  default     = 1000
+}
+
+variable "firewall_inbound_ports" {
+  type        = list(string)
+  description = "List of TCP ports for admission/webhook controllers"
+  default     = ["8443", "9443", "15017"]
+}
+
+variable "config_connector" {
+  type        = bool
+  description = "(Beta) Whether ConfigConnector is enabled for this cluster."
+  default     = false
+}
+
+variable "disable_default_snat" {
+  type        = bool
+  description = "Whether to disable the default SNAT to support the private use of public IP addresses"
+  default     = false
 }

@@ -397,8 +397,18 @@ variable "master_ipv4_cidr_block" {
   description = "(Beta) The IP range in CIDR notation to use for the hosted master network"
   default     = "10.0.0.0/28"
 }
+{% if beta_cluster %}
+
+variable "master_global_access_enabled" {
+  type        = bool
+  description = "(Beta) Whether the cluster master is accessible globally (from any region) or only within the same region as the private endpoint."
+
+  default     = true
+}
+{% endif %}
 {% endif %}
 {% if beta_cluster %}
+
 
 variable "istio" {
   description = "(Beta) Enable Istio addon"
@@ -423,6 +433,18 @@ variable "gce_pd_csi_driver" {
   default     = false
 }
 
+variable "kalm_config" {
+  type        = bool
+  description = "(Beta) Whether KALM is enabled for this cluster."
+  default     = false
+}
+
+variable "config_connector" {
+  type        = bool
+  description = "(Beta) Whether ConfigConnector is enabled for this cluster."
+  default     = false
+}
+
 variable "database_encryption" {
   description = "Application-layer Secrets Encryption settings. The object format is {state = string, key_name = string}. Valid values of state are: \"ENCRYPTED\"; \"DECRYPTED\". key_name is the name of a CloudKMS key."
   type        = list(object({ state = string, key_name = string }))
@@ -443,13 +465,10 @@ variable "enable_binary_authorization" {
   default     = false
 }
 
-variable "pod_security_policy_config" {
-  type        = list(object({ enabled = bool }))
+variable "enable_pod_security_policy" {
+  type        = bool
   description = "enabled - Enable the PodSecurityPolicy controller for this cluster. If enabled, pods must be valid under a PodSecurityPolicy to be created."
-
-  default = [{
-    "enabled" = false
-  }]
+  default     = false
 }
 
 variable "node_metadata" {
@@ -519,3 +538,23 @@ variable "firewall_inbound_ports" {
   description = "List of TCP ports for admission/webhook controllers"
   default     = ["8443", "9443", "15017"]
 }
+
+variable "gcloud_upgrade" {
+  type        = bool
+  description = "Whether to upgrade gcloud at runtime"
+  default     = false
+}
+
+variable "gcloud_skip_download" {
+  type        = bool
+  description = "Whether to skip downloading gcloud (assumes gcloud is already available outside the module)"
+  default     = true
+}
+
+{% if beta_cluster %}
+variable "disable_default_snat" {
+  type        = bool
+  description = "Whether to disable the default SNAT to support the private use of public IP addresses"
+  default     = false
+}
+{% endif %}

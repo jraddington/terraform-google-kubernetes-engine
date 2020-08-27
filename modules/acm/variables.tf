@@ -15,17 +15,17 @@
  */
 
 variable "cluster_name" {
-  description = "The unique name to identify the cluster in ACM."
+  description = "GCP cluster Name used to reach cluster and which becomes the cluster name in the Config Sync kubernetes custom resource."
   type        = string
 }
 
 variable "project_id" {
-  description = "The project in which the resource belongs."
+  description = "GCP project_id used to reach cluster."
   type        = string
 }
 
 variable "location" {
-  description = "The location (zone or region) this cluster has been created in."
+  description = "GCP location used to reach cluster."
   type        = string
 }
 
@@ -41,14 +41,15 @@ variable "sync_repo" {
 }
 
 variable "sync_branch" {
-  description = "ACM repo Git branch"
+  description = "ACM repo Git branch. If un-set, uses Config Management default."
   type        = string
-  default     = "master"
+  default     = ""
 }
 
 variable "policy_dir" {
-  description = "Subfolder containing configs in ACM Git repo"
+  description = "Subfolder containing configs in ACM Git repo. If un-set, uses Config Management default."
   type        = string
+  default     = ""
 }
 
 variable "cluster_endpoint" {
@@ -88,6 +89,24 @@ variable "install_template_library" {
 
 variable "skip_gcloud_download" {
   description = "Whether to skip downloading gcloud (assumes gcloud and kubectl already available outside the module)"
+  type        = bool
+  default     = true
+}
+
+variable "source_format" {
+  description = "Configures a non-hierarchical repo if set to 'unstructured'. Uses [ACM defaults](https://cloud.google.com/anthos-config-management/docs/how-to/installing#configuring-config-management-operator) when unset."
+  type        = string
+  default     = ""
+}
+
+variable "hierarchy_controller" {
+  description = "Configurations for Hierarchy Controller. See [Hierarchy Controller docs](https://cloud.google.com/anthos-config-management/docs/how-to/installing-hierarchy-controller) for more details"
+  type        = map
+  default     = null
+}
+
+variable "enable_log_denies" {
+  description = "Whether to enable logging of all denies and dryrun failures for ACM Policy Controller."
   type        = bool
   default     = false
 }

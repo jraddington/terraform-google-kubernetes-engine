@@ -58,6 +58,11 @@ resource "google_container_cluster" "primary" {
   subnetwork = "projects/${local.network_project_id}/regions/${var.region}/subnetworks/${var.subnetwork}"
 
 {% if beta_cluster %}
+  default_snat_status{
+    disabled = var.disable_default_snat
+  }
+{% endif %}
+{% if beta_cluster %}
   min_master_version = var.release_channel != null ? null : local.master_version
 {% else %}
   min_master_version = local.master_version
@@ -94,9 +99,9 @@ resource "google_container_cluster" "primary" {
   }
 
   dynamic "pod_security_policy_config" {
-    for_each = var.pod_security_policy_config
+    for_each = var.enable_pod_security_policy ? [var.enable_pod_security_policy] : []
     content {
-      enabled = pod_security_policy_config.value.enabled
+      enabled = pod_security_policy_config.value
     }
   }
 {% endif %}
@@ -160,9 +165,20 @@ resource "google_container_cluster" "primary" {
         enabled = gce_persistent_disk_csi_driver_config.value.enabled
       }
     }
+
+    kalm_config {
+      enabled = var.kalm_config
+    }
+
+    config_connector_config {
+      enabled = var.config_connector
+    }
     {% endif %}
   }
 
+  {% if beta_cluster %}
+  networking_mode = "VPC_NATIVE"
+  {% endif %}
   ip_allocation_policy {
     cluster_secondary_range_name  = var.ip_range_pods
     services_secondary_range_name = var.ip_range_services
@@ -249,6 +265,14 @@ resource "google_container_cluster" "primary" {
       enable_private_endpoint = private_cluster_config.value.enable_private_endpoint
       enable_private_nodes    = private_cluster_config.value.enable_private_nodes
       master_ipv4_cidr_block  = private_cluster_config.value.master_ipv4_cidr_block
+      {% if beta_cluster %}
+      dynamic "master_global_access_config" {
+        for_each = var.master_global_access_enabled ? [var.master_global_access_enabled] : []
+        content {
+          enabled = master_global_access_config.value
+        }
+      }
+      {% endif %}
     }
   }
 {% endif %}
@@ -418,7 +442,7 @@ resource "google_container_node_pool" "pools" {
 
   node_config {
     image_type   = lookup(each.value, "image_type", "COS")
-    machine_type = lookup(each.value, "machine_type", "n1-standard-2")
+    machine_type = lookup(each.value, "machine_type", "e2-medium")
     labels = merge(
       lookup(lookup(local.node_pools_labels, "default_values", {}), "cluster_name", true) ? { "cluster_name" = var.name } : {},
       lookup(lookup(local.node_pools_labels, "default_values", {}), "node_pool", true) ? { "node_pool" = each.value["name"] } : {},
@@ -501,7 +525,7 @@ resource "google_container_node_pool" "pools" {
     {% endif %}
 
     shielded_instance_config {
-      enable_secure_boot =  lookup(each.value, "enable_secure_boot", false)
+      enable_secure_boot          = lookup(each.value, "enable_secure_boot", false)
       enable_integrity_monitoring = lookup(each.value, "enable_integrity_monitoring", true)
     }
   }
@@ -521,25 +545,21 @@ resource "google_container_node_pool" "pools" {
   }
 }
 
-resource "null_resource" "wait_for_cluster" {
-  count = var.skip_provisioners ? 0 : 1
+module "gcloud_wait_for_cluster" {
+  source  = "terraform-google-modules/gcloud/google"
+  version = "~> 1.3.0"
+  enabled = var.skip_provisioners
 
-  triggers = {
-    project_id = var.project_id
-    name       = var.name
-  }
+  upgrade       = var.gcloud_upgrade
+  skip_download = var.gcloud_skip_download
 
-  provisioner "local-exec" {
-    command = "${path.module}/scripts/wait-for-cluster.sh ${self.triggers.project_id} ${self.triggers.name}"
-  }
+  create_cmd_entrypoint  = "${path.module}/scripts/wait-for-cluster.sh"
+  create_cmd_body        = "${var.project_id} ${var.name}"
+  destroy_cmd_entrypoint = "${path.module}/scripts/wait-for-cluster.sh"
+  destroy_cmd_body       = "${var.project_id} ${var.name}"
 
-  provisioner "local-exec" {
-    when    = destroy
-    command = "${path.module}/scripts/wait-for-cluster.sh ${self.triggers.project_id} ${self.triggers.name}"
-  }
-
-  depends_on = [
-    google_container_cluster.primary,
-    google_container_node_pool.pools,
-  ]
+  module_depends_on = concat(
+    [google_container_cluster.primary.master_version],
+    [for pool in google_container_node_pool.pools : pool.name]
+  )
 }

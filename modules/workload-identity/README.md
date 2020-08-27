@@ -16,10 +16,10 @@ The `terraform-google-workload-identity` can create a kubernetes service account
 
 ```hcl
 module "my-app-workload-identity" {
-  source    = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
-  name      = "my-application-name"
-  namespace = "default"
-  project   = "my-gcp-project-name"
+  source     = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
+  name       = "my-application-name"
+  namespace  = "default"
+  project_id = "my-gcp-project-name"
 }
 ```
 
@@ -51,9 +51,6 @@ resource "kubernetes_service_account" "preexisting" {
   metadata {
     name = "preexisting-sa"
     namespace = "prod"
-    annotations = {
-      "iam.gke.io/gcp-service-account" = "preexisting-sa@${var.project_id}.iam.gserviceaccount.com"
-    }
   }
 }
 
@@ -62,25 +59,32 @@ module "my-app-workload-identity" {
   use_existing_k8s_sa = true
   name                = "preexisting-sa"
   namespace           = "prod"
-  project             = var.project_id
+  project_id          = var.project_id
 }
 ```
 
+<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Inputs
 
-| Name                   | Description                                                        |  Type  |   Default   | Required |
-| ---------------------- | ------------------------------------------------------------------ | :----: | :---------: | :------: |
-| name                   | Name for both service accounts                                     | string |     n/a     |   yes    |
-| namespace              | Namespace for k8s service account                                  | string | `"default"` |    no    |
-| project                | GCP project ID                                                     | string |     n/a     |   yes    |
-| use\_existing\_k8s\_sa | Use an existing kubernetes service account instead of creating one |  bool  |   `false`   |    no    |
+| Name | Description | Type | Default | Required |
+|------|-------------|:----:|:-----:|:-----:|
+| automount\_service\_account\_token | Enable automatic mounting of the service account token | bool | `"false"` | no |
+| cluster\_name | Cluster name. Required if using existing KSA. | string | `""` | no |
+| k8s\_sa\_name | Name for the existing Kubernetes service account | string | `"null"` | no |
+| location | Cluster location (region if regional cluster, zone if zonal cluster). Required if using existing KSA. | string | `""` | no |
+| name | Name for both service accounts | string | n/a | yes |
+| namespace | Namespace for k8s service account | string | `"default"` | no |
+| project\_id | GCP project ID | string | n/a | yes |
+| use\_existing\_k8s\_sa | Use an existing kubernetes service account instead of creating one | bool | `"false"` | no |
 
 ## Outputs
 
-| Name                             | Description                                                 |
-| -------------------------------- | ----------------------------------------------------------- |
-| gcp\_service\_account\_email     | GCP service account's email                                 |
-| gcp\_service\_account\_fqn       | GCP service account's email prefixed with `serviceAccount:` |
-| gcp\_service\_account\_name      | GCP service account's name                                  |
-| k8s\_service\_account\_name      | Kubernetes service account's name                           |
-| k8s\_service\_account\_namespace | Kubernetes service account's namespace                      |
+| Name | Description |
+|------|-------------|
+| gcp\_service\_account\_email | Email address of GCP service account. |
+| gcp\_service\_account\_fqn | FQN of GCP service account. |
+| gcp\_service\_account\_name | Name of GCP service account. |
+| k8s\_service\_account\_name | Name of k8s service account. |
+| k8s\_service\_account\_namespace | Namespace of k8s service account. |
+
+<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->

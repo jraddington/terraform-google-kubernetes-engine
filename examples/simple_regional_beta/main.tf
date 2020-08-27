@@ -19,7 +19,7 @@ locals {
 }
 
 provider "google-beta" {
-  version = "~> 3.19.0"
+  version = "~> 3.32.0"
   region  = var.region
 }
 
@@ -45,8 +45,12 @@ module "gke" {
   node_pools                  = var.node_pools
   database_encryption         = var.database_encryption
   enable_binary_authorization = var.enable_binary_authorization
-  pod_security_policy_config  = var.pod_security_policy_config
+  enable_pod_security_policy  = var.enable_pod_security_policy
   release_channel             = "REGULAR"
+
+  # Disable workload identity
+  identity_namespace = null
+  node_metadata      = "UNSPECIFIED"
 }
 
 data "google_client_config" "default" {
